@@ -343,6 +343,7 @@ export async function testLLMServiceFlight(
 
 const getProviderSortIndex = (value: string) => {
   const sortOrder = [
+    'aimlapi',
     'google-genai',
     'openai',
     'anthropic',
