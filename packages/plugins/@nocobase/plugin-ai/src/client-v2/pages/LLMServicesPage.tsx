@@ -343,6 +343,7 @@ export async function testLLMServiceFlight(
 
 const getProviderSortIndex = (value: string) => {
   const sortOrder = [
+    'aimlapi',
     'google-genai',
     'openai',
     'anthropic',
@@ -374,6 +375,7 @@ const getProviderDescription = (provider: string, t: ReturnType<typeof useT>) =>
     mistral: 'Mistral models',
     orcarouter: 'OrcaRouter (model routing gateway)',
     shengsuanyun: '300+ latest mainstream models across leading model families',
+    aimlapi: 'Models from OpenAI, Anthropic, Google, DeepSeek and others through one OpenAI-compatible API',
   };
   return descriptions[provider] ? t(descriptions[provider]) : '';
 };
