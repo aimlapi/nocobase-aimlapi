@@ -25,7 +25,7 @@ const CHAT_COMPLETIONS_MODEL_TYPE = 'openai/chat-completions';
 export const AIMLAPI_ATTRIBUTION_HEADERS: Readonly<Record<string, string>> = Object.freeze({
   'HTTP-Referer': 'https://github.com/nocobase/nocobase',
   'X-Title': 'NocoBase',
-  'X-AIMLAPI-Partner-ID': 'part_nocobase',
+  'X-AIMLAPI-Partner-ID': 'part_vIQFIgEDs9Yk0yizVcgoM5Sp',
   'X-AIMLAPI-Source': 'agent/nocobase',
 });
 
