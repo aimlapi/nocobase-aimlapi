@@ -8,7 +8,7 @@
  */
 
 import type { Application } from '@nocobase/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const serverRequestMock = vi.hoisted(() => vi.fn());
 
@@ -22,10 +22,13 @@ vi.mock('@nocobase/utils', async (importOriginal) => {
 
 import {
   AIMLAPI_ATTRIBUTION_HEADERS,
+  AimlapiEmbeddingProvider,
   AimlapiProvider,
   aimlapiProviderOptions,
   supportsChatCompletions,
+  supportsEmbeddings,
 } from '../aimlapi';
+import { SupportedModel } from '../../manager/ai-manager';
 
 function createApp(): Application {
   return {
@@ -163,5 +166,76 @@ describe('AimlapiProvider', () => {
       errMsg: 'API Key required',
     });
     expect(serverRequestMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('AimlapiEmbeddingProvider', () => {
+  // The base class refuses a base URL that is not whitelisted, so it has to be set before construction.
+  beforeEach(() => {
+    process.env.SERVER_REQUEST_WHITELIST = 'api.aimlapi.com,example.invalid';
+  });
+
+  afterEach(() => {
+    process.env.SERVER_REQUEST_WHITELIST = originalWhitelist;
+  });
+
+  const build = (serviceOptions: Record<string, unknown> = {}) =>
+    new AimlapiEmbeddingProvider({
+      app: createApp(),
+      serviceOptions: { apiKey: 'test-key', ...serviceOptions },
+      modelOptions: { model: 'openai/text-embedding-3-small' },
+    });
+
+  it('defaults to the AI/ML API embeddings surface', () => {
+    expect(build().createEmbedding()).toMatchObject({
+      model: 'openai/text-embedding-3-small',
+    });
+  });
+
+  it('attributes embedding traffic, not only chat', () => {
+    const embeddings = build().createEmbedding() as unknown as {
+      clientConfig: { baseURL: string; defaultHeaders?: Record<string, string> };
+    };
+
+    expect(embeddings.clientConfig).toMatchObject({
+      baseURL: 'https://api.aimlapi.com/v1',
+      defaultHeaders: { ...AIMLAPI_ATTRIBUTION_HEADERS },
+    });
+  });
+
+  // Same rule the chat provider follows: baseURL is user-configurable, so it may point at another vendor or at a
+  // proxy fronting this API, and neither should receive our partner id.
+  it('withholds attribution when the base URL is not AI/ML API', () => {
+    const embeddings = build({ baseURL: 'https://example.invalid/v1' }).createEmbedding() as unknown as {
+      clientConfig: { defaultHeaders?: Record<string, string> };
+    };
+
+    expect(embeddings.clientConfig.defaultHeaders).toBeUndefined();
+  });
+});
+
+describe('embedding model discovery', () => {
+  // The chat predicate keeps untyped entries, because a foreign OpenAI-compatible catalog may carry no type at all.
+  // The embedding predicate must not: an untyped entry is a chat model, and offering it here 404s at the first index.
+  it('accepts only entries the catalog marks as embeddings', () => {
+    expect(supportsEmbeddings({ id: 'openai/text-embedding-3-small', type: 'openai/embeddings' })).toBe(true);
+    expect(supportsEmbeddings({ id: 'openai/gpt-4o-mini', type: 'openai/chat-completions' })).toBe(false);
+    expect(supportsEmbeddings({ id: 'some/model' })).toBe(false);
+    expect(supportsChatCompletions({ id: 'some/model' })).toBe(true);
+  });
+
+  it('offers embeddings as a selectable model kind', () => {
+    expect(aimlapiProviderOptions.supportedModel).toContain(SupportedModel.EMBEDDING);
+    expect(aimlapiProviderOptions.embedding).toBe(AimlapiEmbeddingProvider);
+  });
+
+  // The picker reads a static list per model kind rather than calling the provider, so an empty list here would make
+  // the provider selectable and then offer nothing to select.
+  it('enumerates embedding models for the picker', () => {
+    const models = aimlapiProviderOptions.models?.[SupportedModel.EMBEDDING] ?? [];
+
+    expect(models.length).toBeGreaterThan(0);
+    expect(models).toContain('openai/text-embedding-3-small');
+    expect(models.every((id) => typeof id === 'string' && id.includes('/'))).toBe(true);
   });
 });
