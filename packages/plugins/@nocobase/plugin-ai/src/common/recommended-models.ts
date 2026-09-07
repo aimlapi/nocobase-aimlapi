@@ -11,7 +11,14 @@
  * NocoBase officially recommended models for each LLM provider.
  * These models are tested to ensure quality and compatibility.
  */
-export const recommendedModels: Record<string, { label: string; value: string }[]> = {};
+export const recommendedModels: Record<string, { label: string; value: string }[]> = {
+  aimlapi: [
+    { label: 'GPT-4o', value: 'openai/gpt-4o' },
+    { label: 'Claude Sonnet 4.5', value: 'anthropic/claude-sonnet-4.5' },
+    { label: 'Gemini 2.5 Pro', value: 'google/gemini-2.5-pro' },
+    { label: 'DeepSeek Chat', value: 'deepseek/deepseek-chat' },
+  ],
+};
 
 /**
  * Check if a model is recommended for a given provider
